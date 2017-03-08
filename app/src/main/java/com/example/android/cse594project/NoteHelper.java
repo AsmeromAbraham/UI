@@ -1,45 +1,37 @@
 package com.example.android.cse594project;
 
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.DatePickerDialog;
-import android.app.Notification;
-import android.app.PendingIntent;
-import android.app.TimePickerDialog;
-import android.content.Context;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.text.format.DateFormat;
+import android.support.v7.widget.PopupMenu;
+import android.view.ContextMenu;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.TimePicker;
+import android.widget.Toast;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-
-public class NoteHelper extends AppCompatActivity implements DatePickerDialog.OnDateSetListener, TimePickerDialog.OnTimeSetListener{
+public class NoteHelper extends AppCompatActivity {
 
     DBHandler dbHandler;
     int id;
     String noteText;
     EditText noteField;
     Button b_pick;
-    TextView tv_result;
     Crypt crypt;
-    int day, month, year, hour, minute;
-    int dayFinal, monthFinal, yearFinal, hourFinal, minuteFinal;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_note_helper);
+
         Typeface myTypeface = Typeface.createFromAsset(getAssets(), "baskerville_old_face.ttf");
         EditText myEditText = (EditText) findViewById(R.id.updatenotetext);
         Button myDeleteButton = (Button) findViewById(R.id.deletebutton);
@@ -50,7 +42,6 @@ public class NoteHelper extends AppCompatActivity implements DatePickerDialog.On
         myAlarmButton.setTypeface(myTypeface);
         mySaveButton.setTypeface(myTypeface);
 
-        b_pick = (Button) findViewById(R.id.alarmbutton);
         Bundle extras = getIntent().getExtras();
         id = extras.getInt("id");
         noteText = extras.getString("notetext");
@@ -58,28 +49,35 @@ public class NoteHelper extends AppCompatActivity implements DatePickerDialog.On
         crypt = new Crypt();
         noteField = (EditText) findViewById(R.id.updatenotetext);
         noteField.setText(noteText);
-        b_pick.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Calendar c = Calendar.getInstance();
-                year = c.get(Calendar.YEAR);
-                month = c.get(Calendar.MONTH);
-                day = c.get(Calendar.DAY_OF_MONTH);
-                DatePickerDialog datePickerDialog = new DatePickerDialog(NoteHelper.this, NoteHelper.this,
-                        year, month, day);
-                datePickerDialog.show();
-            }
-        });
+        noteField.setSelection(noteField.getText().length());
+        getDate();
     }
 
     public void deleteNote(View view) {
-        dbHandler.deleteNote(id);
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra("noteinfo", "Note Deleted");
-        setResult(Activity.RESULT_OK, resultIntent);
-        finish();
-    }
 
+        AlertDialog.Builder a_builder = new AlertDialog.Builder(this);
+        a_builder.setMessage("Are you sure you want to delete this note?");
+        a_builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dbHandler.deleteNote(id);
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra("noteinfo", "Note Deleted");
+                setResult(Activity.RESULT_OK, resultIntent);
+                finish();
+            }
+        });
+        a_builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+        AlertDialog alert = a_builder.create();
+        alert.setTitle("WARNING");
+        alert.show();
+
+    }
 
     public void updateNote(View view) {
         String n = noteField.getText().toString();
@@ -91,54 +89,96 @@ public class NoteHelper extends AppCompatActivity implements DatePickerDialog.On
         finish();
     }
 
+    public  void alarm (View view){
 
-    public void onDateSet(DatePicker view, int i, int i1, int i2) {
-        yearFinal = i;
-        monthFinal = i1 + 1;
-        dayFinal = i2;
-        Calendar c = Calendar.getInstance();
-        hour=c.get(Calendar.HOUR_OF_DAY);
-        minute=c.get(Calendar.MINUTE);
-        TimePickerDialog timePickerDialog = new TimePickerDialog(NoteHelper.this, NoteHelper.this,
-                hour, minute, DateFormat.is24HourFormat(this));
-        timePickerDialog.show();
+        registerForContextMenu(view);
+            openContextMenu(view);
+        /*
+        PopupMenu popupMenu = new PopupMenu(this, view);
+
+        popupMenu.inflate(R.menu.alarm_menu);
+
+        MenuItem menuItem =
+
+        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                if(item.getItemId() == R.id.alarmbutton) {
+                    item.title
+                    //set notification alarm
+                }
+                else if (item.getItemId() == R.id.voicebutton) {
+                    //set voice alarm
+                }
+                else if (item.getItemId() == R.id.cancelbutton) {
+                    //cancel alarm
+                }
+                return false;
+            }
+        });
+
+        popupMenu.show();
+        */
     }
 
 
-    public void onTimeSet(TimePicker view, int i, int i1) {
-        hourFinal   = i;
-        minuteFinal = i1;
-        SimpleDateFormat ft = new SimpleDateFormat ("yyyy-MM-dd hh:mm");
-        String test = yearFinal + "-" + monthFinal + "-" + dayFinal + " " + hourFinal + ":" + minuteFinal;
-        Date date = new Date();
-        Date d1 = new Date();
-        try {
-            d1 = ft.parse(test);
-        }catch (ParseException e) {
-            System.out.println("Unparseable using " + ft);
+        @Override
+        public void onCreateContextMenu(ContextMenu menu, View view, ContextMenu.ContextMenuInfo menuInfo){
+            super.onCreateContextMenu(menu, view, menuInfo);
+            MenuInflater menuInflater = getMenuInflater();
+            menuInflater.inflate(R.menu.alarm_menu, menu);
+
+            MenuItem menuItem = menu.findItem(R.id.cancelbutton);
         }
-        long diff = d1.getTime() - date.getTime();
-        System.out.println(diff);
-        String encryptedalarmNote = dbHandler.getNote(id);
-        String alarmNote = crypt.decrypt(encryptedalarmNote);
-        scheduleNotification(getNotification(alarmNote), diff);
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item){
+        switch (item.getItemId()){
+            case R.id.alarmbutton:
+                // do something
+                Toast.makeText(getApplicationContext(), "Notification Alarm Set", Toast.LENGTH_SHORT).show();
+                return true;
+            case R.id.voicebutton:
+                //do somthing
+                Toast.makeText(getApplicationContext(), "Voice Alarm Set", Toast.LENGTH_SHORT).show();
+                return  true;
+            case R.id.cancelbutton:
+                Toast.makeText(getApplicationContext(), "Alarm Canceled", Toast.LENGTH_SHORT).show();
+                return  true;
+        }
+        return super.onContextItemSelected(item);
     }
 
-    private void scheduleNotification(Notification notification, long delay) {
-        Intent notificationIntent = new Intent(this, NotificationPublisher.class);
-        notificationIntent.putExtra(NotificationPublisher.NOTIFICATION_ID, 20);
-        notificationIntent.putExtra(NotificationPublisher.NOTIFICATION, notification);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this.getApplicationContext(), 23433, notificationIntent, 0);
-        AlarmManager alarmManager = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-        alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + delay, pendingIntent);
+
+
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      POP UP ALARM ABOVE IS NOT FUNCTIONAL. REGULAR ALARM BELOW IS FUNCTIONAL
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    public void alarm(View view) {
+        Bundle bundle = new Bundle();
+        bundle.putString("notetext", noteText);
+        bundle.putInt("id", id);
+        Intent intent = new Intent(getApplicationContext(), Alarm.class);
+        intent.putExtras(bundle);
+        startActivityForResult(intent, 1);
+    }
+*/
+    public void getDate() {
+       TextView alarmField = (TextView) findViewById(R.id.alarmfield);
+        String date =  dbHandler.getDate(id);
+        if(!date.equals("null")) {
+            alarmField.setText("Alarm: " + date);
+        }
+        else {
+            alarmField.setText("Alarm: ");
+        }
     }
 
-    private Notification getNotification(String content) {
-        Notification.Builder builder = new Notification.Builder(this);
-        builder.setContentTitle("Scheduled Notification");
-        builder.setContentText(content);
-        builder.setSmallIcon(R.drawable.ic_launcher);
-        return builder.build();
+    protected void onActivityResult(int requestCode, int resultCode, Intent data){
+        getDate();
     }
 }
 

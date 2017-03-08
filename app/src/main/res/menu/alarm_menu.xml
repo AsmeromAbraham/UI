@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/alarmbutton"
+        android:title="Set Notification Alarm"
+        />
+
+    <item
+        android:id="@+id/voicebutton"
+        android:title="Set Voice Alarm"
+        />
+
+    <item
+        android:id="@+id/cancelbutton"
+        android:title="Cancel Alarm"
+        />
+
+</menu>
